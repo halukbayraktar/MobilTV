@@ -239,6 +239,7 @@
           <li><span>İlk açılışta <b>▶ Başlat</b>'a dokunun. Bir kanal kendiliğinden başlamazsa videoya bir kez dokunun.</span></li>
         </ol>
       </div>
+      <div class="warn" style="margin-top:4px"><b>Arka planda oynatma:</b> Telefon tarayıcıları ve YouTube'un gömülü oynatıcısı, uygulama arka plana alınınca yayını durdurur; bunu hiçbir web uygulaması aşamaz. Geri döndüğünüzde MobilTV yayınları kendiliğinden sürdürür. Arka planda dinlemek için: tek kanalda <b>YouTube'da aç</b> ile YouTube uygulamasına geçin (Premium'da arka plan oynatma vardır) ya da TRT kanallarında ⧉ ile küçük pencere (PiP) açın.</div>
       <div class="note">Reklamsız izleme yalnızca YouTube Premium aboneliğiyle mümkündür; Premium yoksa giriş reklamı kaldırmaz. Bilgisayarda: tarayıcıda YouTube'a giriş yapmanız yeterli.</div>
       <div class="row"><a href="https://www.youtube.com/signin" target="_blank" rel="noopener" style="flex:1"><button type="button" style="width:100%;height:44px">YouTube'a giriş yap</button></a><button type="button" id="guideDone" style="height:44px">Anladım</button></div>
     </div>
@@ -378,6 +379,7 @@ function buildTile(i){
         <span class="live">CANLI</span><span class="name">${esc(ch.name)}</span>
         ${ytUrl(ch) ? `<a class="ytlink" href="${esc(ytUrl(ch))}" target="_blank" rel="noopener" title="YouTube'da aç"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12c0 1.6.2 3.2.5 4.8a3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5A3 3 0 0 0 23 16.8c.3-1.6.5-3.2.5-4.8s-.2-3.2-.5-4.8zM9.8 15.5v-7l6 3.5z"/></svg>YouTube'da aç</a>` : ''}
         <button type="button" data-act="sound" aria-label="Sesi aç / kapat">${ICON_OFF}</button>
+        ${ch.hls ? '<button type="button" data-act="pip" aria-label="Küçük pencerede izle" title="Küçük pencere (PiP)">⧉</button>' : ''}
         <button type="button" data-act="pick" aria-label="Kanalı değiştir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg></button>
         <button type="button" data-act="solo" aria-label="Büyüt">⤢</button>
       </div>
@@ -397,6 +399,8 @@ function buildTile(i){
     else if(act==='solo') toggleSolo(tile);
     else if(act==='alt'){ state.alt[i]=!state.alt[i]; save(); reloadTile(i); }
     else if(act==='reload') reloadTile(i);
+    else if(act==='pip'){ const v=tile.querySelector('video'); if(!v) return;
+      try{ if(v.webkitSetPresentationMode) v.webkitSetPresentationMode('picture-in-picture'); else if(v.requestPictureInPicture) v.requestPictureInPicture(); else toast('Bu tarayıcı küçük pencereyi desteklemiyor'); }catch(e){ toast('Küçük pencere açılamadı'); } }
   });
   return tile;
 }
@@ -443,6 +447,7 @@ function buildPlayer(ch, src, i){
     return f;
   }
   const v=document.createElement('video'); v.muted=true; v.autoplay=true; v.playsInline=true; v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline',''); v.title=ch.name;
+  v.addEventListener('play', () => { try{ if('mediaSession' in navigator){ navigator.mediaSession.metadata = new MediaMetadata({title: ch.name, artist: 'MobilTV'}); navigator.mediaSession.setActionHandler('play', () => v.play()); navigator.mediaSession.setActionHandler('pause', () => v.pause()); } }catch(e){} });
   const fail = m => showErr(i,m);
   if(v.canPlayType('application/vnd.apple.mpegurl')){ v.src=src.url; v.addEventListener('error',()=>fail('Yayın açılamadı.')); v.play().catch(()=>{}); }
   else if(window.Hls && Hls.isSupported()){ const h=new Hls({enableWorker:true,lowLatencyMode:true}); h.loadSource(src.url); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED,()=>v.play().catch(()=>{})); h.on(Hls.Events.ERROR,(ev,d)=>{ if(d.fatal){ fail('Ağ engeli ya da yayın kapalı.'); h.destroy(); } }); }
@@ -552,7 +557,12 @@ $('#cAdd').addEventListener('click', () => {
 $('#btnReloadAll').addEventListener('click', () => { $('#settings').classList.remove('open'); render(); });
 $('#btnRefreshList').addEventListener('click', () => loadChannelList(true));
 $('#btnReset').addEventListener('click', () => { state={layout:1,slots:DEFAULT_SLOTS.slice(),custom:[],alt:{},v2:true}; save(); $('#settings').classList.remove('open'); render(); toast('Varsayılanlara dönüldü'); });
-document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') applySound(); });
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState!=='visible') return;
+  // Arka plandan dönüşte: duran yayınları yeniden başlat (telefon izin vermezse videoya dokunma ipucu çıkar)
+  applySound(); playAll(); setTimeout(playAll, 1200);
+});
+window.addEventListener('pageshow', e => { if(e.persisted){ playAll(); setTimeout(playAll, 1200); } });
 
 /* ---------- haftalık güncellenen yayın listesi ---------- */
 function loadChannelList(manual){
