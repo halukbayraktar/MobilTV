@@ -41,6 +41,7 @@
 
   /* ızgara */
   #grid{flex:1;min-height:0;display:grid;gap:5px;padding:4px max(4px,var(--sar)) 4px max(4px,var(--sal));background:#000}
+  #grid[data-n="1"]{grid-template-columns:1fr;grid-template-rows:1fr}
   #grid[data-n="2"]{grid-template-columns:1fr;grid-template-rows:repeat(2,1fr)}
   #grid[data-n="4"]{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)}
   #grid[data-n="6"]{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(3,1fr)}
@@ -107,6 +108,15 @@
   .setrow:last-child{border-bottom:0}
   .setrow small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 
+  #start{position:fixed;inset:0;z-index:120;background:rgba(11,13,16,.96);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+  #start.show{display:flex}
+  #start .big{width:92px;height:92px;border-radius:50%;background:var(--accent);border:0;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 12px rgba(255,59,59,.15)}
+  #start .big svg{width:40px;height:40px;margin-left:4px}
+  #start h1{margin:0;font-size:22px}
+  #start p{margin:0;color:var(--muted);font-size:14px;max-width:320px}
+  .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;width:56px;height:56px;border-radius:50%;background:rgba(255,59,59,.92);border:0;color:#fff;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  .play.show{display:flex}
+  .play svg{width:26px;height:26px;margin-left:3px}
   #toast{position:fixed;left:50%;bottom:calc(var(--sab) + 100px);transform:translateX(-50%);background:#222;border:1px solid var(--line);padding:10px 14px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;font-size:13px;max-width:90vw;text-align:center}
   #toast.show{opacity:1}
   #install{display:none;position:fixed;left:12px;right:12px;bottom:calc(var(--sab) + 100px);z-index:150;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
@@ -120,6 +130,7 @@
   <header id="top">
     <div class="brand"><span class="dot"></span>MobilTV</div>
     <div class="seg" role="group" aria-label="Ekran sayısı">
+      <button data-layout="1">1</button>
       <button data-layout="2">2</button>
       <button data-layout="4">4</button>
       <button data-layout="6">6</button>
@@ -173,6 +184,7 @@
   </div>
 </div>
 
+<div id="start"><button type="button" class="big" id="startBtn" aria-label="Yayınları başlat"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><h1>MobilTV</h1><p>Yayınları başlatmak için dokunun. Telefon tarayıcıları canlı yayını ancak dokunduktan sonra oynatır.</p></div>
 <div id="toast"></div>
 <div id="install"><b>Uygulama olarak ekleyin</b>Safari'de alttaki Paylaş düğmesine basıp <b style="display:inline">Ana Ekrana Ekle</b> seçin; MobilTV kendi ikonuyla tam ekran açılır.<br><button type="button" id="installClose">Tamam</button></div>
 
@@ -227,7 +239,7 @@ const MAX = 6, KEY = 'mobilTV.v1';
 
 let state = load() || {layout:4, slots:DEFAULT_SLOTS.slice(), custom:[], alt:{}};
 if(!Array.isArray(state.slots)) state.slots = DEFAULT_SLOTS.slice();
-if(![2,4,6].includes(state.layout)) state.layout = 4;
+if(![1,2,4,6].includes(state.layout)) state.layout = 4;
 while(state.slots.length < MAX) state.slots.push(null);
 state.custom = state.custom || []; state.alt = state.alt || {};
 let soundSlot = null, pickerSlot = null, moveFrom = null, cat = 'Haber';
@@ -287,7 +299,7 @@ function buildTile(i){
         <button type="button" data-act="sound" aria-label="Sesi aç / kapat">${ICON_OFF}</button>
         <button type="button" data-act="solo" aria-label="Büyüt">⤢</button>
       </div>
-      <div class="player"><div class="cover" aria-hidden="true"></div></div>
+      <div class="player"><div class="cover" aria-hidden="true"></div><button type="button" class="play" data-act="play" aria-label="Oynat"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button></div>
       <div class="err"><b>Yayın alınamadı.</b> <span class="errmsg"></span><br>
         ${hasAlt ? '<button type="button" data-act="alt">Alternatif kaynak</button>' : ''}
         <button type="button" data-act="reload">Yeniden yükle</button>
@@ -303,6 +315,7 @@ function buildTile(i){
     else if(act==='solo') toggleSolo(tile);
     else if(act==='alt'){ state.alt[i]=!state.alt[i]; save(); reloadTile(i); }
     else if(act==='reload') reloadTile(i);
+    else if(act==='play') playTile(tile);
   });
   return tile;
 }
@@ -360,13 +373,20 @@ window.addEventListener('message', ev => {
   let d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
   const tile=[...grid.querySelectorAll('.tile')].find(t=>{ const f=t.querySelector('iframe'); return f && f.contentWindow===ev.source; }); if(!tile) return;
   const i=+tile.dataset.i, ch=byId(state.slots[i]);
-  if(d.event==='onReady'){ applySoundTo(tile.querySelector('iframe'), i===soundSlot); return; }
+  if(d.event==='onReady'){ const f=tile.querySelector('iframe'); ytCmd(f,'playVideo'); applySoundTo(f, i===soundSlot); return; }
+  if(d.event==='infoDelivery' && d.info && typeof d.info.playerState==='number'){
+    const st=d.info.playerState; // 1 oynuyor, 3 yükleniyor, -1/2/5 durmuş
+    tile.querySelector('.play')?.classList.toggle('show', st===-1||st===2||st===5);
+    return;
+  }
   if(d.event!=='onError') return;
   const codes={2:'Geçersiz video ID',5:'Oynatıcı hatası',100:'Yayın bulunamadı',101:'Yayıncı gömmeyi kapatmış',150:'Yayıncı gömmeyi kapatmış'};
   if(ch && ch.yt && ch.ytc && !state.alt[i] && (d.info===100||d.info===2)){ state.alt[i]=true; save(); reloadTile(i); toast(`${ch.name}: kanal üzerinden yeniden bağlanıldı`); return; }
   showErr(i, codes[d.info] || ('Hata '+d.info));
 });
 
+function playTile(tile){ const f=tile.querySelector('iframe'); if(f){ ytCmd(f,'playVideo'); } const v=tile.querySelector('video'); if(v) v.play().catch(()=>{}); tile.querySelector('.play')?.classList.remove('show'); }
+function playAll(){ grid.querySelectorAll('.tile').forEach(playTile); }
 /* ses: aynı anda tek ekran */
 function ytCmd(f,func,args){ try{ f.contentWindow.postMessage(JSON.stringify({event:'command',func,args:args||[]}),'*'); }catch(e){} }
 function applySoundTo(f,on){ if(!f) return; if(on){ ytCmd(f,'unMute'); ytCmd(f,'setVolume',[100]); ytCmd(f,'playVideo'); } else ytCmd(f,'mute'); }
@@ -450,8 +470,13 @@ $('#installClose').addEventListener('click', () => { $('#install').classList.rem
 
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
-render();
-loadChannelList(false);
+/* İlk açılış: dokunuş alındıktan sonra yayınlar kurulur (mobil tarayıcı autoplay kuralı) */
+let started = false;
+function start(){ if(started) return; started=true; $('#start').classList.remove('show'); render(); loadChannelList(false); setTimeout(playAll, 1500); setTimeout(playAll, 4000); }
+$('#startBtn').addEventListener('click', start);
+$('#start').addEventListener('click', e => { if(e.target.id==='start') start(); });
+const touchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+if(touchDevice){ $('#start').classList.add('show'); } else { start(); }
 })();
 </script>
 </body>
