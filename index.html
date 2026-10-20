@@ -131,6 +131,15 @@
   .play{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:4;height:30px;padding:0 12px 0 8px;border-radius:15px;background:rgba(255,59,59,.92);border:0;color:#fff;display:none;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.5);pointer-events:none}
   .play.show{display:flex}
   .play svg{width:16px;height:16px}
+  .steps{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none;counter-reset:st}
+  .steps li{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);font-size:14px;line-height:1.4}
+  .steps li::before{counter-increment:st;content:counter(st);flex:none;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .steps li b{color:var(--accent2)}
+  .steps li small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+  .plat{display:flex;gap:8px}
+  .plat button{flex:1;height:40px;font-weight:600}
+  .warn{border:1px solid var(--accent2);border-radius:12px;padding:10px 12px;font-size:13px;background:rgba(255,176,32,.08)}
+  .warn b{color:var(--accent2)}
   #toast{position:fixed;left:50%;bottom:calc(var(--sab) + 100px);transform:translateX(-50%);background:#222;border:1px solid var(--line);padding:10px 14px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;font-size:13px;max-width:90vw;text-align:center}
   #toast.show{opacity:1}
   #install{display:none;position:fixed;left:12px;right:12px;bottom:calc(var(--sab) + 100px);z-index:150;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
@@ -196,13 +205,42 @@
     <div class="grab"><span></span></div>
     <header><h2>Ayarlar</h2><button type="button" data-close="settings">Kapat</button></header>
     <div class="body">
-      <div class="setrow"><div>Android: ana ekrana ekle<small>Chrome'da ⋮ menü → "Ana ekrana ekle" / "Uygulamayı yükle". Tam ekran açılır ve Chrome'daki YouTube girişinizi kullanır.</small></div></div>
-      <div class="setrow"><div>iPhone: ana ekrana ekle<small>Safari'de Paylaş → "Ana Ekrana Ekle". İkon MobilTV'yi Safari içinde açar (Apple, ana ekran uygulamalarına Safari'nin YouTube girişini vermez; bu yüzden tam ekran sürüm reklam gösterir). Telefonu yatırınca Safari çubuğu gizlenir.</small></div></div>
-      <div class="setrow"><div>YouTube Premium ile reklamsız izleme<small><b>1)</b> Aşağıdaki düğmeyle Premium hesabınıza giriş yapın (açılan sayfada girişi tamamlayıp geri dönün). <b>2)</b> Üçüncü taraf çerezlere izin verin: iPhone → Ayarlar → Safari → "Siteler Arası İzlemeyi Engelle" <b>kapalı</b>; Android Chrome → Ayarlar → Site ayarları → Üçüncü taraf çerezler → <b>İzin ver</b>. <b>3)</b> Aşağıdaki "Yükle" ile yayınları yeniden başlatın. Giriş görünmezse sayfayı tamamen kapatıp açın.</small></div><a href="https://www.youtube.com/signin" target="_blank" rel="noopener" style="flex:none"><button type="button">Giriş yap</button></a></div>
+      <div class="setrow"><div>Kurulum ve yardım<small>Ana ekrana ekleme ve YouTube Premium ile reklamsız izleme adımları (iPhone ve Android).</small></div><button type="button" id="btnGuide">Rehber</button></div>
+      <div class="setrow"><div>YouTube hesabı<small>Premium hesabınızla giriş yapın; giriş bu tarayıcıda kalmalı.</small></div><a href="https://www.youtube.com/signin" target="_blank" rel="noopener" style="flex:none"><button type="button">Giriş yap</button></a></div>
       <div class="setrow"><div>Yayın adresleri<small id="listInfo">Haftalık otomatik güncellenen listeden okunur.</small></div><button type="button" id="btnRefreshList">Yenile</button></div>
       <div class="setrow"><div>Tüm yayınları yeniden yükle<small>Donan ekranları açar.</small></div><button type="button" id="btnReloadAll">Yükle</button></div>
       <div class="setrow"><div>Varsayılana dön<small>Kanal yerleşimi ve özel kanallar sıfırlanır.</small></div><button type="button" id="btnReset">Sıfırla</button></div>
       <div class="note" style="padding-top:8px">MobilTV · Çoklu TV'nin mobil sürümü · Web sürümü: <a href="https://halukbayraktar.github.io/friendly-octo-umbrella/" style="color:var(--accent)">Çoklu TV</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- Kurulum rehberi -->
+<div class="sheet" id="guide">
+  <div class="box">
+    <div class="grab"><span></span></div>
+    <header><h2>Kurulum rehberi</h2><button type="button" data-close="guide">Kapat</button></header>
+    <div class="body">
+      <div class="plat"><button type="button" data-plat="ios">iPhone / iPad</button><button type="button" data-plat="android">Android</button></div>
+      <div id="guideIOS">
+        <div class="warn"><b>Önce:</b> MobilTV ikonu ana ekranınızda zaten varsa onu <b>silin</b> (basılı tut → Uygulamayı Sil). Eski ikon kapalı bir oturumla açılır; YouTube girişinizi görmez ve reklam gösterir.</div>
+        <ol class="steps" style="margin-top:10px">
+          <li><span>Safari'de <b>youtube.com</b>'u açıp YouTube Premium hesabınızla giriş yapın.<small>Giriş Safari'de kalmalı; YouTube uygulamasındaki giriş sayılmaz.</small></span></li>
+          <li><span>iPhone <b>Ayarlar → Safari → Siteler Arası İzlemeyi Engelle</b> seçeneğini <b>kapatın</b>.<small>Açık kalırsa Safari, oynatıcıya girişinizi göstermez ve reklam devam eder.</small></span></li>
+          <li><span>Safari'de MobilTV'yi açın → alttaki <b>Paylaş</b> → <b>Ana Ekrana Ekle</b>.<small>İkon MobilTV'yi Safari içinde açar; Premium girişiniz böylece geçerli olur. Telefonu yatırınca Safari çubuğu gizlenir.</small></span></li>
+          <li><span>İlk açılışta <b>▶ Başlat</b>'a dokunun. Bir kanal kendiliğinden başlamazsa videoya bir kez dokunun.</span></li>
+        </ol>
+      </div>
+      <div id="guideAndroid" hidden>
+        <ol class="steps">
+          <li><span>Chrome'da <b>youtube.com</b>'u açıp YouTube Premium hesabınızla giriş yapın.</span></li>
+          <li><span>Chrome <b>⋮ → Ayarlar → Site ayarları → Üçüncü taraf çerezler → İzin ver</b>.<small>Engelliyse oynatıcı girişinizi görmez ve reklam gösterir.</small></span></li>
+          <li><span>Chrome'da MobilTV'yi açın → <b>⋮ → Ana ekrana ekle</b> (veya "Uygulamayı yükle").<small>Uygulama tam ekran açılır ve Chrome'daki YouTube girişinizi kullanır.</small><span id="androidInstallSlot"></span></span></li>
+          <li><span>İlk açılışta <b>▶ Başlat</b>'a dokunun. Bir kanal kendiliğinden başlamazsa videoya bir kez dokunun.</span></li>
+        </ol>
+      </div>
+      <div class="note">Reklamsız izleme yalnızca YouTube Premium aboneliğiyle mümkündür; Premium yoksa giriş reklamı kaldırmaz. Bilgisayarda: tarayıcıda YouTube'a giriş yapmanız yeterli.</div>
+      <div class="row"><a href="https://www.youtube.com/signin" target="_blank" rel="noopener" style="flex:1"><button type="button" style="width:100%;height:44px">YouTube'a giriş yap</button></a><button type="button" id="guideDone" style="height:44px">Anladım</button></div>
     </div>
   </div>
 </div>
@@ -517,15 +555,25 @@ const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platfo
 const isAndroid = /android/i.test(navigator.userAgent);
 let deferredInstall = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e;
-  try{ if(!standalone && !localStorage.getItem('mobilTV.installHint')){ $('#installText').innerHTML = 'Chrome menüsünden <b class="inl">Ana ekrana ekle</b> seçin ya da bu düğmeye basın: '; const b=document.createElement('button'); b.type='button'; b.textContent='Yükle'; b.style.marginLeft='6px'; b.addEventListener('click', () => { deferredInstall.prompt(); deferredInstall=null; $('#install').classList.remove('show'); }); $('#installText').appendChild(b); $('#install').classList.add('show'); } }catch(e){} });
-try{ if(isIOS && !standalone && !localStorage.getItem('mobilTV.installHint')){ setTimeout(()=>$('#install').classList.add('show'), 4000); } }catch(e){}
-$('#installClose').addEventListener('click', () => { $('#install').classList.remove('show'); try{ localStorage.setItem('mobilTV.installHint','1'); }catch(e){} });
+  const slot=$('#androidInstallSlot'); if(slot && !slot.firstChild){ const b=document.createElement('button'); b.type='button'; b.textContent='Şimdi yükle'; b.style.marginTop='8px'; b.addEventListener('click', () => { if(deferredInstall){ deferredInstall.prompt(); deferredInstall=null; } }); slot.appendChild(b); } });
+function showGuide(plat){
+  plat = plat || (isAndroid ? 'android' : 'ios');
+  $('#guideIOS').hidden = plat!=='ios'; $('#guideAndroid').hidden = plat!=='android';
+  document.querySelectorAll('[data-plat]').forEach(b => b.classList.toggle('active', b.dataset.plat===plat));
+  $('#guide').classList.add('open');
+}
+document.querySelectorAll('[data-plat]').forEach(b => b.addEventListener('click', () => showGuide(b.dataset.plat)));
+$('#btnGuide').addEventListener('click', () => { $('#settings').classList.remove('open'); showGuide(); });
+$('#guideDone').addEventListener('click', () => { $('#guide').classList.remove('open'); try{ localStorage.setItem('mobilTV.guideSeen','1'); }catch(e){} });
+$('#installClose').addEventListener('click', () => $('#install').classList.remove('show'));
+let guideSeen = false; try{ guideSeen = !!localStorage.getItem('mobilTV.guideSeen'); }catch(e){}
 
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
 /* İlk açılış: dokunuş alındıktan sonra yayınlar kurulur (mobil tarayıcı autoplay kuralı) */
 let started = false;
-function start(){ if(started) return; started=true; $('#start').classList.remove('show'); render(); loadChannelList(false); setTimeout(playAll, 1500); setTimeout(playAll, 4000); }
+function start(){ if(started) return; started=true; $('#start').classList.remove('show'); render(); loadChannelList(false); setTimeout(playAll, 1500); setTimeout(playAll, 4000);
+  if(touchDevice && !guideSeen && !standalone) setTimeout(() => showGuide(), 2500); }
 $('#startBtn').addEventListener('click', start);
 $('#start').addEventListener('click', e => { if(e.target.id==='start') start(); });
 if(touchDevice){ $('#start').classList.add('show'); } else { start(); }
