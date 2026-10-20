@@ -68,8 +68,8 @@
   #grid[data-n="1"] .hud .ytlink, #grid.solo .tile.solo .hud .ytlink{display:flex}
   .player{position:relative;flex:1;min-height:0;background:#000}
   .player iframe,.player video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
-  .cover{position:absolute;inset:0;z-index:2;touch-action:manipulation}
-  .tile.idle .cover{pointer-events:none}          /* oynamıyorken dokunuş doğrudan YouTube'a gider */
+  .cover{display:none}                              /* dokunuşlar doğrudan YouTube'a gider: dokun = durdur/başlat */
+  .hud{touch-action:manipulation;user-select:none;-webkit-user-select:none}
   .tile.idle .hud button[data-act="sound"]{opacity:.5}
   .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:13px}
   .err{position:absolute;left:6px;right:6px;bottom:6px;z-index:3;background:rgba(0,0,0,.85);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:12px;display:none}
@@ -144,7 +144,7 @@
 
   <main id="grid" data-n="4"></main>
 
-  <div id="hint">Oynayan kanala: dokun → değiştir · basılı tut → taşı · çift dokun → büyüt</div>
+  <div id="hint">Videoya dokun → durdur/başlat · ⇅ kanal değiştir · şeride basılı tut → taşı · şeride çift dokun → büyüt</div>
 
   <nav id="tabs">
     <button id="tabWatch" class="active" aria-label="İzle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>İzle</button>
@@ -309,7 +309,7 @@ function buildTile(i){
         <button type="button" data-act="pick" aria-label="Kanalı değiştir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg></button>
         <button type="button" data-act="solo" aria-label="Büyüt">⤢</button>
       </div>
-      <div class="player"><div class="cover" aria-hidden="true"></div><div class="play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Oynatmak için videoya dokun</div></div>
+      <div class="player"><div class="cover" aria-hidden="true"></div><div class="play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Başlatmak için videoya dokun</div></div>
       <div class="err"><b>Yayın alınamadı.</b> <span class="errmsg"></span><br>
         ${hasAlt ? '<button type="button" data-act="alt">Alternatif kaynak</button>' : ''}
         <button type="button" data-act="reload">Yeniden yükle</button>
@@ -330,15 +330,17 @@ function buildTile(i){
 }
 /* dokun: kanal değiştir · basılı tut: taşı · çift dokun: büyüt */
 function attachGestures(tile, i){
-  const cover = tile.querySelector('.cover');
+  const cover = tile.querySelector('.hud');
   let pressT=null, lastTap=0, moved=false, sx=0, sy=0;
   cover.addEventListener('pointerdown', e => {
+    if(e.target.closest('button,a')) return;
     moved=false; sx=e.clientX; sy=e.clientY;
     pressT = setTimeout(() => { pressT=null; startMove(i); }, 450);
   });
   cover.addEventListener('pointermove', e => { if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10){ moved=true; clearTimeout(pressT); pressT=null; } });
   cover.addEventListener('pointercancel', () => { clearTimeout(pressT); pressT=null; });
   cover.addEventListener('pointerup', e => {
+    if(e.target.closest('button,a')) return;
     if(pressT===null){ return; }           // uzun basış zaten işlendi
     clearTimeout(pressT); pressT=null;
     if(moved) return;
@@ -350,9 +352,8 @@ function attachGestures(tile, i){
 }
 function onTap(i){
   if(moveFrom!==null){ const from=moveFrom; endMove(); if(from!==i) swap(from,i); return; }
-  openPicker(i);
 }
-function startMove(i){ moveFrom=i; grid.querySelectorAll('.tile').forEach(t=>t.classList.toggle('moving', +t.dataset.i===i)); if(navigator.vibrate) navigator.vibrate(20); toast('Taşıma: yerini değiştirmek istediğin ekrana dokun'); }
+function startMove(i){ moveFrom=i; grid.querySelectorAll('.tile').forEach(t=>t.classList.toggle('moving', +t.dataset.i===i)); if(navigator.vibrate) navigator.vibrate(20); toast('Taşıma: yerini değiştirmek istediğin ekranın üst şeridine dokun'); }
 function endMove(){ moveFrom=null; grid.querySelectorAll('.tile.moving').forEach(t=>t.classList.remove('moving')); }
 function swap(a,b){ [state.slots[a],state.slots[b]]=[state.slots[b],state.slots[a]]; [state.alt[a],state.alt[b]]=[state.alt[b],state.alt[a]]; if(soundSlot===a) soundSlot=b; else if(soundSlot===b) soundSlot=a; save(); render(); }
 function reloadTile(i){ const old=grid.querySelector(`.tile[data-i="${i}"]`); if(old) grid.replaceChild(buildTile(i), old); else render(); applySound(); }
