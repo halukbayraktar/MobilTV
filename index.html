@@ -589,7 +589,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){ naviga
 /* İlk açılış: dokunuş alındıktan sonra yayınlar kurulur (mobil tarayıcı autoplay kuralı) */
 let started = false;
 function start(){ if(started) return; started=true; $('#start').classList.remove('show'); render(); loadChannelList(false); setTimeout(playAll, 1500); setTimeout(playAll, 4000);
-  if(touchDevice && !guideSeen && !standalone) setTimeout(() => showGuide(), 2500); }
+}
 $('#startBtn').addEventListener('click', start);
 $('#start').addEventListener('click', e => { if(e.target.id==='start') start(); });
 if(touchDevice){ $('#start').classList.add('show'); } else { start(); }
