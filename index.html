@@ -174,7 +174,7 @@
   <nav id="tabs">
     <button id="tabWatch" class="active" aria-label="İzle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>İzle</button>
     <button id="tabChannels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M8 3v2M16 3v2"/><path d="m10 9 5 3-5 3z"/></svg>Kanallar</button>
-    <button id="tabMute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>Sessiz</button>
+    <button id="tabMute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg><span>Sesi aç</span></button>
     <button id="tabSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>Ayarlar</button>
   </nav>
 </div>
@@ -227,7 +227,7 @@
         <ol class="steps" style="margin-top:10px">
           <li><span>Safari'de <b>youtube.com</b>'u açıp YouTube Premium hesabınızla giriş yapın.<small>Giriş Safari'de kalmalı; YouTube uygulamasındaki giriş sayılmaz.</small></span></li>
           <li><span>iPhone <b>Ayarlar → Safari → Siteler Arası İzlemeyi Engelle</b> seçeneğini <b>kapatın</b>.<small>Açık kalırsa Safari, oynatıcıya girişinizi göstermez ve reklam devam eder.</small></span></li>
-          <li><span>Safari'de MobilTV'yi açın → alttaki <b>Paylaş</b> → <b>Ana Ekrana Ekle</b>.<small>İkon MobilTV'yi Safari içinde açar; Premium girişiniz böylece geçerli olur. Telefonu yatırınca Safari çubuğu gizlenir.</small></span></li>
+          <li><span>Safari'de MobilTV'yi açın → alttaki <b>Paylaş</b> → <b>Ana Ekrana Ekle</b>. Açılan pencerede <b>"Web Uygulaması Olarak Aç" anahtarı KAPALI</b> olmalı; sonra <b>Ekle</b>.<small>Anahtar açık kalırsa uygulama ayrı bir oturumda açılır, Premium girişinizi görmez ve reklam gösterir. Kapalıyken ikon MobilTV'yi Safari içinde açar. Telefonu yatırınca Safari çubuğu gizlenir.</small></span></li>
           <li><span>İlk açılışta <b>▶ Başlat</b>'a dokunun. Bir kanal kendiliğinden başlamazsa videoya bir kez dokunun.</span></li>
         </ol>
       </div>
@@ -356,14 +356,15 @@ function zap(d){
 }
 $('#zapPrev').addEventListener('click', () => zap(-1));
 $('#zapNext').addEventListener('click', () => zap(+1));
-const YT_PARAMS = () => 'autoplay=1&mute=1&controls=0&fs=0&rel=0&iv_load_policy=3&disablekb=1&playsinline=1&enablejsapi=1' + (location.protocol.startsWith('http') ? '&origin=' + encodeURIComponent(location.origin) : '');
+const YT_PARAMS = (muted=true) => 'autoplay=1&mute='+(muted?1:0)+'&controls=0&fs=0&rel=0&iv_load_policy=3&disablekb=1&playsinline=1&enablejsapi=1' + (location.protocol.startsWith('http') ? '&origin=' + encodeURIComponent(location.origin) : '');
 function ytUrl(ch){ if(ch.yt) return 'https://www.youtube.com/watch?v='+ch.yt; if(ch.ytc) return 'https://www.youtube.com/channel/'+ch.ytc+'/live'; return null; }
 function sourceFor(ch, i){
   if(ch.hls) return {type:'hls', url:ch.hls};
   const useAlt = state.alt[i] && ch.ytc;
-  if(ch.yt && !useAlt) return {type:'yt', url:`https://www.youtube.com/embed/${ch.yt}?${YT_PARAMS()}`};
-  if(ch.ytc) return {type:'yt', url:`https://www.youtube.com/embed/live_stream?channel=${ch.ytc}&${YT_PARAMS()}`};
-  return {type:'yt', url:`https://www.youtube.com/embed/${ch.yt}?${YT_PARAMS()}`};
+  const muted = !(touchDevice && soundSlot===i);   // telefonda sesli ekran, oynatıcıyı sesli yükler
+  if(ch.yt && !useAlt) return {type:'yt', url:`https://www.youtube.com/embed/${ch.yt}?${YT_PARAMS(muted)}`};
+  if(ch.ytc) return {type:'yt', url:`https://www.youtube.com/embed/live_stream?channel=${ch.ytc}&${YT_PARAMS(muted)}`};
+  return {type:'yt', url:`https://www.youtube.com/embed/${ch.yt}?${YT_PARAMS(muted)}`};
 }
 function buildTile(i){
   const tile = document.createElement('div'); tile.className='tile idle'; tile.dataset.i=i;
@@ -459,7 +460,7 @@ window.addEventListener('message', ev => {
     const st=d.info.playerState; // 1 oynuyor, 3 yükleniyor, -1/2/5 durmuş
     const idle = (st===-1||st===2||st===5);
     tile.classList.toggle('idle', idle);
-    tile.querySelector('.play')?.classList.toggle('show', idle && touchDevice);
+    const ph=tile.querySelector('.play'); if(ph){ ph.classList.toggle('show', idle && touchDevice); ph.lastChild.textContent = (i===soundSlot) ? 'Sesli başlatmak için videoya dokun' : 'Başlatmak için videoya dokun'; }
     return;
   }
   if(d.event!=='onError') return;
@@ -481,9 +482,19 @@ function applySound(){
     applySoundTo(t.querySelector('iframe'),on);
     const v=t.querySelector('video'); if(v){ v.muted=!on; if(on) v.play().catch(()=>{}); }
   });
-  $('#tabMute').classList.toggle('active', soundSlot===null);
+  updateMuteTab();
 }
-function toggleSound(i){ soundSlot = (soundSlot===i)?null:i; applySound(); }
+function toggleSound(i){
+  const prev = soundSlot;
+  soundSlot = (soundSlot===i)?null:i;
+  if(touchDevice){
+    // Telefon tarayıcıları dışarıdan "sesi aç" komutunu kabul etmez: ilgili oynatıcıyı sesli/sessiz yeniden yükle
+    if(prev!==null && prev!==i) reloadTile(prev);
+    reloadTile(i);
+    if(soundSlot===i) toast('Sesli oynatmak için videoya bir kez dokunun');
+  } else applySound();
+}
+function updateMuteTab(){ const b=$('#tabMute'); if(!b) return; const on = soundSlot!==null; b.classList.toggle('active', !on); b.querySelector('span').textContent = on ? 'Sesi kapat' : 'Sesi aç'; }
 
 /* ---------- kanal seçici ---------- */
 function openPicker(i){ pickerSlot=i; $('#pickerTitle').textContent=`${i+1}. ekran için kanal seç`; $('#pickerSearch').value=''; renderCats(); renderPickerList(); $('#picker').classList.add('open'); }
@@ -513,7 +524,12 @@ function assign(i,id){ state.slots[i]=id; delete state.alt[i]; save(); reloadTil
 document.querySelectorAll('#top [data-layout]').forEach(b => b.addEventListener('click', () => { state.layout=+b.dataset.layout; save(); render(); }));
 $('#tabWatch').addEventListener('click', () => { document.querySelectorAll('.sheet.open').forEach(s=>s.classList.remove('open')); if(grid.classList.contains('solo')){ grid.classList.remove('solo'); grid.querySelectorAll('.tile.solo').forEach(t=>t.classList.remove('solo')); } });
 $('#tabChannels').addEventListener('click', () => { const i = state.slots.slice(0,state.layout).indexOf(null); openPicker(i<0?0:i); });
-$('#tabMute').addEventListener('click', () => { soundSlot=null; applySound(); toast('Tüm sesler kapatıldı'); });
+$('#tabMute').addEventListener('click', () => {
+  if(soundSlot!==null){ toggleSound(soundSlot); toast('Sesler kapatıldı'); return; }
+  const solo = grid.querySelector('.tile.solo'); const i = solo ? +solo.dataset.i : 0;
+  if(!byId(state.slots[i])){ toast('Önce bir kanal seçin'); return; }
+  toggleSound(i);
+});
 $('#tabSettings').addEventListener('click', () => $('#settings').classList.add('open'));
 document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => $('#'+b.dataset.close).classList.remove('open')));
 document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if(e.target===s) s.classList.remove('open'); }));
