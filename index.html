@@ -6,9 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0b0d10">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MobilTV">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -127,6 +124,7 @@
   #install{display:none;position:fixed;left:12px;right:12px;bottom:calc(var(--sab) + 100px);z-index:150;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
   #install.show{display:block}
   #install b{display:block;margin-bottom:4px}
+  #install .inl{display:inline;margin:0}
   #install button{margin-top:8px;font-size:12px;padding:6px 10px}
 </style>
 </head>
@@ -142,7 +140,7 @@
     </div>
   </header>
 
-  <main id="grid" data-n="4"></main>
+  <main id="grid" data-n="1"></main>
 
   <div id="hint">Videoya dokun → durdur/başlat · ⇅ kanal değiştir · şeride basılı tut → taşı · şeride çift dokun → büyüt</div>
 
@@ -180,8 +178,8 @@
     <div class="grab"><span></span></div>
     <header><h2>Ayarlar</h2><button type="button" data-close="settings">Kapat</button></header>
     <div class="body">
-      <div class="setrow"><div>Ana ekrana ekle<small>Safari'de Paylaş → "Ana Ekrana Ekle". Uygulama kendi ikonuyla tam ekran açılır.</small></div></div>
-      <div class="setrow"><div>YouTube hesabı (reklamsız izleme)<small>YouTube Premium hesabınızla bu tarayıcıda giriş yaparsanız kanallar reklamsız oynar. Girişten sonra iPhone'da çerez iznini açın: Safari → Ayarlar → "Siteler Arası İzlemeyi Engelle" kapalı; Chrome → Gizlilik → üçüncü taraf çerezlere izin. Ana ekrana eklenmiş sürüm Safari girişini görmez; reklamsız izleme için tarayıcı sekmesinde açın.</small></div><a href="https://www.youtube.com/signin" target="_blank" rel="noopener" style="flex:none"><button type="button">Giriş yap</button></a></div>
+      <div class="setrow"><div>Ana ekrana ekle<small>Safari'de Paylaş → "Ana Ekrana Ekle". İkon, MobilTV'yi Safari içinde açar; böylece Safari'deki YouTube girişiniz (Premium) geçerli olur. Tam ekran için telefonu yatırın, Safari çubuğu kendiliğinden gizlenir.</small></div></div>
+      <div class="setrow"><div>YouTube Premium ile reklamsız izleme<small>1) Aşağıdaki düğmeyle Premium hesabınıza giriş yapın. 2) iPhone Ayarlar → Safari → "Siteler Arası İzlemeyi Engelle" seçeneğini kapatın (kapalı olmazsa Safari, oynatıcıya girişinizi göstermez). 3) MobilTV'yi yeniden açın.</small></div><a href="https://www.youtube.com/signin" target="_blank" rel="noopener" style="flex:none"><button type="button">Giriş yap</button></a></div>
       <div class="setrow"><div>Yayın adresleri<small id="listInfo">Haftalık otomatik güncellenen listeden okunur.</small></div><button type="button" id="btnRefreshList">Yenile</button></div>
       <div class="setrow"><div>Tüm yayınları yeniden yükle<small>Donan ekranları açar.</small></div><button type="button" id="btnReloadAll">Yükle</button></div>
       <div class="setrow"><div>Varsayılana dön<small>Kanal yerleşimi ve özel kanallar sıfırlanır.</small></div><button type="button" id="btnReset">Sıfırla</button></div>
@@ -192,7 +190,7 @@
 
 <div id="start"><button type="button" class="big" id="startBtn" aria-label="Yayınları başlat"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><h1>MobilTV</h1><p>Yayınları başlatmak için dokunun. Telefon tarayıcıları canlı yayını ancak dokunduktan sonra oynatır.</p></div>
 <div id="toast"></div>
-<div id="install"><b>Uygulama olarak ekleyin</b>Safari'de alttaki Paylaş düğmesine basıp <b style="display:inline">Ana Ekrana Ekle</b> seçin; MobilTV kendi ikonuyla tam ekran açılır.<br><button type="button" id="installClose">Tamam</button></div>
+<div id="install"><b>Ana ekrana ekleyin</b>Safari'de alttaki Paylaş düğmesine basıp <b class="inl">Ana Ekrana Ekle</b> seçin. İkon MobilTV'yi Safari içinde açar; YouTube Premium girişiniz böylece geçerli olur.<br><button type="button" id="installClose">Tamam</button></div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <script>
@@ -243,9 +241,10 @@ const GROUPS = ['Haber','Ekonomi','Spor','Genel','TRT','Özel'];
 const DEFAULT_SLOTS = ['ntv','haberturk','cnnturk','trthaber','halktv','sozcu'];
 const MAX = 6, KEY = 'mobilTV.v1';
 
-let state = load() || {layout:4, slots:DEFAULT_SLOTS.slice(), custom:[], alt:{}};
+let state = load() || {layout:1, slots:DEFAULT_SLOTS.slice(), custom:[], alt:{}};
 if(!Array.isArray(state.slots)) state.slots = DEFAULT_SLOTS.slice();
-if(![1,2,4,6].includes(state.layout)) state.layout = 4;
+if(![1,2,4,6].includes(state.layout)) state.layout = 1;
+if(!state.v2){ state.layout = 1; state.v2 = true; }   // bir kez: varsayılan açılış tek kanal
 while(state.slots.length < MAX) state.slots.push(null);
 state.custom = state.custom || []; state.alt = state.alt || {};
 let soundSlot = null, pickerSlot = null, moveFrom = null, cat = 'Haber';
@@ -464,7 +463,7 @@ $('#cAdd').addEventListener('click', () => {
 });
 $('#btnReloadAll').addEventListener('click', () => { $('#settings').classList.remove('open'); render(); });
 $('#btnRefreshList').addEventListener('click', () => loadChannelList(true));
-$('#btnReset').addEventListener('click', () => { state={layout:4,slots:DEFAULT_SLOTS.slice(),custom:[],alt:{}}; save(); $('#settings').classList.remove('open'); render(); toast('Varsayılanlara dönüldü'); });
+$('#btnReset').addEventListener('click', () => { state={layout:1,slots:DEFAULT_SLOTS.slice(),custom:[],alt:{},v2:true}; save(); $('#settings').classList.remove('open'); render(); toast('Varsayılanlara dönüldü'); });
 document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') applySound(); });
 
 /* ---------- haftalık güncellenen yayın listesi ---------- */
