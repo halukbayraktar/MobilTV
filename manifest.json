@@ -4,7 +4,7 @@
   "description": "Türk haber kanallarını aynı anda izle",
   "start_url": "./",
   "scope": "./",
-  "display": "browser",
+  "display": "standalone",
   "orientation": "any",
   "background_color": "#0b0d10",
   "theme_color": "#0b0d10",

@@ -7,7 +7,12 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0b0d10">
 <meta name="apple-mobile-web-app-title" content="MobilTV">
-<link rel="manifest" href="manifest.json">
+<script>
+/* Android: tam ekran uygulama (Chrome oturumunu paylaşır, Premium geçerli).
+   iOS: ikon Safari içinde açar; ana ekran uygulaması Safari'nin YouTube girişini göremez. */
+(function(){ var ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  var l=document.createElement('link'); l.rel='manifest'; l.href=ios?'manifest-ios.json':'manifest.json'; document.head.appendChild(l); })();
+</script>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <style>
@@ -191,8 +196,9 @@
     <div class="grab"><span></span></div>
     <header><h2>Ayarlar</h2><button type="button" data-close="settings">Kapat</button></header>
     <div class="body">
-      <div class="setrow"><div>Ana ekrana ekle<small>Safari'de Paylaş → "Ana Ekrana Ekle". İkon, MobilTV'yi Safari içinde açar; böylece Safari'deki YouTube girişiniz (Premium) geçerli olur. Tam ekran için telefonu yatırın, Safari çubuğu kendiliğinden gizlenir.</small></div></div>
-      <div class="setrow"><div>YouTube Premium ile reklamsız izleme<small>1) Aşağıdaki düğmeyle Premium hesabınıza giriş yapın. 2) iPhone Ayarlar → Safari → "Siteler Arası İzlemeyi Engelle" seçeneğini kapatın (kapalı olmazsa Safari, oynatıcıya girişinizi göstermez). 3) MobilTV'yi yeniden açın.</small></div><a href="https://www.youtube.com/signin" target="_blank" rel="noopener" style="flex:none"><button type="button">Giriş yap</button></a></div>
+      <div class="setrow"><div>Android: ana ekrana ekle<small>Chrome'da ⋮ menü → "Ana ekrana ekle" / "Uygulamayı yükle". Tam ekran açılır ve Chrome'daki YouTube girişinizi kullanır.</small></div></div>
+      <div class="setrow"><div>iPhone: ana ekrana ekle<small>Safari'de Paylaş → "Ana Ekrana Ekle". İkon MobilTV'yi Safari içinde açar (Apple, ana ekran uygulamalarına Safari'nin YouTube girişini vermez; bu yüzden tam ekran sürüm reklam gösterir). Telefonu yatırınca Safari çubuğu gizlenir.</small></div></div>
+      <div class="setrow"><div>YouTube Premium ile reklamsız izleme<small><b>1)</b> Aşağıdaki düğmeyle Premium hesabınıza giriş yapın (açılan sayfada girişi tamamlayıp geri dönün). <b>2)</b> Üçüncü taraf çerezlere izin verin: iPhone → Ayarlar → Safari → "Siteler Arası İzlemeyi Engelle" <b>kapalı</b>; Android Chrome → Ayarlar → Site ayarları → Üçüncü taraf çerezler → <b>İzin ver</b>. <b>3)</b> Aşağıdaki "Yükle" ile yayınları yeniden başlatın. Giriş görünmezse sayfayı tamamen kapatıp açın.</small></div><a href="https://www.youtube.com/signin" target="_blank" rel="noopener" style="flex:none"><button type="button">Giriş yap</button></a></div>
       <div class="setrow"><div>Yayın adresleri<small id="listInfo">Haftalık otomatik güncellenen listeden okunur.</small></div><button type="button" id="btnRefreshList">Yenile</button></div>
       <div class="setrow"><div>Tüm yayınları yeniden yükle<small>Donan ekranları açar.</small></div><button type="button" id="btnReloadAll">Yükle</button></div>
       <div class="setrow"><div>Varsayılana dön<small>Kanal yerleşimi ve özel kanallar sıfırlanır.</small></div><button type="button" id="btnReset">Sıfırla</button></div>
@@ -203,7 +209,7 @@
 
 <div id="start"><button type="button" class="big" id="startBtn" aria-label="Yayınları başlat"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button><h1>MobilTV</h1><p>Yayınları başlatmak için dokunun. Telefon tarayıcıları canlı yayını ancak dokunduktan sonra oynatır.</p></div>
 <div id="toast"></div>
-<div id="install"><b>Ana ekrana ekleyin</b>Safari'de alttaki Paylaş düğmesine basıp <b class="inl">Ana Ekrana Ekle</b> seçin. İkon MobilTV'yi Safari içinde açar; YouTube Premium girişiniz böylece geçerli olur.<br><button type="button" id="installClose">Tamam</button></div>
+<div id="install"><b>Ana ekrana ekleyin</b><span id="installText">Safari'de alttaki Paylaş düğmesine basıp <b class="inl">Ana Ekrana Ekle</b> seçin. İkon MobilTV'yi Safari içinde açar; YouTube Premium girişiniz böylece geçerli olur.</span><br><button type="button" id="installClose">Tamam</button></div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <script>
@@ -507,7 +513,11 @@ function loadChannelList(manual){
 
 /* ---------- ana ekrana ekleme ipucu ---------- */
 let standalone = false; try{ standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); }catch(e){}
-const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+const isAndroid = /android/i.test(navigator.userAgent);
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e;
+  try{ if(!standalone && !localStorage.getItem('mobilTV.installHint')){ $('#installText').innerHTML = 'Chrome menüsünden <b class="inl">Ana ekrana ekle</b> seçin ya da bu düğmeye basın: '; const b=document.createElement('button'); b.type='button'; b.textContent='Yükle'; b.style.marginLeft='6px'; b.addEventListener('click', () => { deferredInstall.prompt(); deferredInstall=null; $('#install').classList.remove('show'); }); $('#installText').appendChild(b); $('#install').classList.add('show'); } }catch(e){} });
 try{ if(isIOS && !standalone && !localStorage.getItem('mobilTV.installHint')){ setTimeout(()=>$('#install').classList.add('show'), 4000); } }catch(e){}
 $('#installClose').addEventListener('click', () => { $('#install').classList.remove('show'); try{ localStorage.setItem('mobilTV.installHint','1'); }catch(e){} });
 
