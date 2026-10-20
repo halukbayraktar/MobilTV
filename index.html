@@ -73,6 +73,13 @@
   .err.show{display:block}.err b{color:var(--accent2)}
   .err button{margin-top:6px;margin-right:6px;font-size:12px;padding:5px 8px}
 
+  /* tek kanalda kanal geçiş çubuğu */
+  #zap{display:none;flex:none;align-items:center;gap:8px;padding:6px max(12px,var(--sar)) 6px max(12px,var(--sal));background:var(--bg)}
+  #app[data-n="1"] #zap{display:flex}
+  #zap button{flex:none;height:44px;min-width:92px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px}
+  #zap button svg{width:16px;height:16px}
+  #zap .cur{flex:1;min-width:0;text-align:center;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #zap .cur b{color:var(--text)}
   /* ipucu + alt sekme */
   #hint{flex:none;padding:4px 16px;font-size:11px;color:var(--muted);text-align:center;background:var(--bg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #tabs{flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px max(12px,var(--sar)) calc(var(--sab) + 6px) max(12px,var(--sal));background:var(--panel);border-top:1px solid var(--line)}
@@ -141,6 +148,12 @@
   </header>
 
   <main id="grid" data-n="1"></main>
+
+  <div id="zap">
+    <button type="button" id="zapPrev" aria-label="Önceki kanal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>Önceki</button>
+    <div class="cur" id="zapCur"></div>
+    <button type="button" id="zapNext" aria-label="Sonraki kanal">Sonraki<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+  </div>
 
   <div id="hint">Videoya dokun → durdur/başlat · ⇅ kanal değiştir · şeride basılı tut → taşı · şeride çift dokun → büyüt</div>
 
@@ -278,12 +291,27 @@ function parseSource(input){
 
 /* ---------- çizim ---------- */
 function render(){
-  grid.dataset.n = state.layout;
+  grid.dataset.n = state.layout; $('#app').dataset.n = state.layout;
   document.querySelectorAll('#top [data-layout]').forEach(b => b.classList.toggle('active', +b.dataset.layout === state.layout));
   grid.innerHTML = ''; grid.classList.remove('solo');
   for(let i=0;i<state.layout;i++) grid.appendChild(buildTile(i));
-  applySound();
+  applySound(); updateZap();
 }
+/* tek kanal: önceki / sonraki */
+function zapList(){ const order=c=>GROUPS.indexOf(c.group||'Özel'); return all().slice().sort((a,b)=>order(a)-order(b)); }
+function updateZap(){
+  const list=zapList(), idx=list.findIndex(c=>c.id===state.slots[0]);
+  $('#zapCur').innerHTML = idx>=0 ? `<b>${esc(list[idx].name)}</b> · ${idx+1}/${list.length} · ${esc(list[idx].group||'Özel')}` : `${list.length} kanal`;
+}
+function zap(d){
+  const list=zapList(); if(!list.length) return;
+  let idx=list.findIndex(c=>c.id===state.slots[0]); idx = (idx<0?0:idx+d+list.length)%list.length;
+  state.slots[0]=list[idx].id; delete state.alt[0]; save(); reloadTile(0); updateZap();
+  if(soundSlot===0) applySound();
+  toast(list[idx].name);
+}
+$('#zapPrev').addEventListener('click', () => zap(-1));
+$('#zapNext').addEventListener('click', () => zap(+1));
 const YT_PARAMS = () => 'autoplay=1&mute=1&controls=0&fs=0&rel=0&iv_load_policy=3&disablekb=1&playsinline=1&enablejsapi=1' + (location.protocol.startsWith('http') ? '&origin=' + encodeURIComponent(location.origin) : '');
 function ytUrl(ch){ if(ch.yt) return 'https://www.youtube.com/watch?v='+ch.yt; if(ch.ytc) return 'https://www.youtube.com/channel/'+ch.ytc+'/live'; return null; }
 function sourceFor(ch, i){
@@ -435,7 +463,7 @@ function renderPickerList(){
       ${c.custom?`<span class="del" data-del="${esc(c.id)}" title="Sil">×</span>`:''}</button>`;
   }).join('') || '<p class="note">Eşleşen kanal yok.</p>';
 }
-function assign(i,id){ state.slots[i]=id; delete state.alt[i]; save(); reloadTile(i); }
+function assign(i,id){ state.slots[i]=id; delete state.alt[i]; save(); reloadTile(i); updateZap(); }
 
 /* ---------- olaylar ---------- */
 document.querySelectorAll('#top [data-layout]').forEach(b => b.addEventListener('click', () => { state.layout=+b.dataset.layout; save(); render(); }));
