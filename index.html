@@ -66,6 +66,8 @@
   .player{position:relative;flex:1;min-height:0;background:#000}
   .player iframe,.player video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
   .cover{position:absolute;inset:0;z-index:2;touch-action:manipulation}
+  .tile.idle .cover{pointer-events:none}          /* oynamıyorken dokunuş doğrudan YouTube'a gider */
+  .tile.idle .hud button[data-act="sound"]{opacity:.5}
   .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:13px}
   .err{position:absolute;left:6px;right:6px;bottom:6px;z-index:3;background:rgba(0,0,0,.85);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:12px;display:none}
   .err.show{display:block}.err b{color:var(--accent2)}
@@ -114,9 +116,9 @@
   #start .big svg{width:40px;height:40px;margin-left:4px}
   #start h1{margin:0;font-size:22px}
   #start p{margin:0;color:var(--muted);font-size:14px;max-width:320px}
-  .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;width:56px;height:56px;border-radius:50%;background:rgba(255,59,59,.92);border:0;color:#fff;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+  .play{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:4;height:30px;padding:0 12px 0 8px;border-radius:15px;background:rgba(255,59,59,.92);border:0;color:#fff;display:none;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.5);pointer-events:none}
   .play.show{display:flex}
-  .play svg{width:26px;height:26px;margin-left:3px}
+  .play svg{width:16px;height:16px}
   #toast{position:fixed;left:50%;bottom:calc(var(--sab) + 100px);transform:translateX(-50%);background:#222;border:1px solid var(--line);padding:10px 14px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;font-size:13px;max-width:90vw;text-align:center}
   #toast.show{opacity:1}
   #install{display:none;position:fixed;left:12px;right:12px;bottom:calc(var(--sab) + 100px);z-index:150;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
@@ -139,7 +141,7 @@
 
   <main id="grid" data-n="4"></main>
 
-  <div id="hint">Dokun → kanal değiştir · Basılı tut → taşı · Çift dokun → büyüt</div>
+  <div id="hint">Oynayan kanala: dokun → değiştir · basılı tut → taşı · çift dokun → büyüt</div>
 
   <nav id="tabs">
     <button id="tabWatch" class="active" aria-label="İzle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>İzle</button>
@@ -243,6 +245,7 @@ if(![1,2,4,6].includes(state.layout)) state.layout = 4;
 while(state.slots.length < MAX) state.slots.push(null);
 state.custom = state.custom || []; state.alt = state.alt || {};
 let soundSlot = null, pickerSlot = null, moveFrom = null, cat = 'Haber';
+const touchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
@@ -287,7 +290,7 @@ function sourceFor(ch, i){
   return {type:'yt', url:`https://www.youtube.com/embed/${ch.yt}?${YT_PARAMS()}`};
 }
 function buildTile(i){
-  const tile = document.createElement('div'); tile.className='tile'; tile.dataset.i=i;
+  const tile = document.createElement('div'); tile.className='tile idle'; tile.dataset.i=i;
   const ch = byId(state.slots[i]);
   if(!ch){
     tile.innerHTML = `<div class="empty"><div>Boş ekran</div><button type="button" data-act="pick">+ Kanal seç</button></div>`;
@@ -297,9 +300,10 @@ function buildTile(i){
       <div class="hud">
         <span class="live">CANLI</span><span class="name">${esc(ch.name)}</span>
         <button type="button" data-act="sound" aria-label="Sesi aç / kapat">${ICON_OFF}</button>
+        <button type="button" data-act="pick" aria-label="Kanalı değiştir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg></button>
         <button type="button" data-act="solo" aria-label="Büyüt">⤢</button>
       </div>
-      <div class="player"><div class="cover" aria-hidden="true"></div><button type="button" class="play" data-act="play" aria-label="Oynat"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button></div>
+      <div class="player"><div class="cover" aria-hidden="true"></div><div class="play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Oynatmak için videoya dokun</div></div>
       <div class="err"><b>Yayın alınamadı.</b> <span class="errmsg"></span><br>
         ${hasAlt ? '<button type="button" data-act="alt">Alternatif kaynak</button>' : ''}
         <button type="button" data-act="reload">Yeniden yükle</button>
@@ -315,7 +319,6 @@ function buildTile(i){
     else if(act==='solo') toggleSolo(tile);
     else if(act==='alt'){ state.alt[i]=!state.alt[i]; save(); reloadTile(i); }
     else if(act==='reload') reloadTile(i);
-    else if(act==='play') playTile(tile);
   });
   return tile;
 }
@@ -376,7 +379,9 @@ window.addEventListener('message', ev => {
   if(d.event==='onReady'){ const f=tile.querySelector('iframe'); ytCmd(f,'playVideo'); applySoundTo(f, i===soundSlot); return; }
   if(d.event==='infoDelivery' && d.info && typeof d.info.playerState==='number'){
     const st=d.info.playerState; // 1 oynuyor, 3 yükleniyor, -1/2/5 durmuş
-    tile.querySelector('.play')?.classList.toggle('show', st===-1||st===2||st===5);
+    const idle = (st===-1||st===2||st===5);
+    tile.classList.toggle('idle', idle);
+    tile.querySelector('.play')?.classList.toggle('show', idle && touchDevice);
     return;
   }
   if(d.event!=='onError') return;
@@ -385,7 +390,7 @@ window.addEventListener('message', ev => {
   showErr(i, codes[d.info] || ('Hata '+d.info));
 });
 
-function playTile(tile){ const f=tile.querySelector('iframe'); if(f){ ytCmd(f,'playVideo'); } const v=tile.querySelector('video'); if(v) v.play().catch(()=>{}); tile.querySelector('.play')?.classList.remove('show'); }
+function playTile(tile){ const f=tile.querySelector('iframe'); if(f){ ytCmd(f,'playVideo'); } const v=tile.querySelector('video'); if(v){ v.play().catch(()=>{}); tile.classList.remove('idle'); } }
 function playAll(){ grid.querySelectorAll('.tile').forEach(playTile); }
 /* ses: aynı anda tek ekran */
 function ytCmd(f,func,args){ try{ f.contentWindow.postMessage(JSON.stringify({event:'command',func,args:args||[]}),'*'); }catch(e){} }
@@ -406,11 +411,15 @@ function toggleSound(i){ soundSlot = (soundSlot===i)?null:i; applySound(); }
 function openPicker(i){ pickerSlot=i; $('#pickerTitle').textContent=`${i+1}. ekran için kanal seç`; $('#pickerSearch').value=''; renderCats(); renderPickerList(); $('#picker').classList.add('open'); }
 function renderCats(){
   const counts = {}; all().forEach(c=>{ const g=c.group||'Özel'; counts[g]=(counts[g]||0)+1; });
-  $('#cats').innerHTML = GROUPS.filter(g=>counts[g]).map(g=>`<button type="button" data-cat="${g}" class="${g===cat?'active':''}">${g} · ${counts[g]}</button>`).join('');
+  const total = all().length;
+  $('#cats').innerHTML = `<button type="button" data-cat="Tümü" class="${cat==='Tümü'?'active':''}">Tümü · ${total}</button>` +
+    GROUPS.filter(g=>counts[g]).map(g=>`<button type="button" data-cat="${g}" class="${g===cat?'active':''}">${g} · ${counts[g]}</button>`).join('');
 }
 function renderPickerList(){
   const q = $('#pickerSearch').value.trim().toLocaleLowerCase('tr');
-  const list = all().filter(c => q ? c.name.toLocaleLowerCase('tr').includes(q) : (c.group||'Özel')===cat);
+  const list = all().filter(c => q ? c.name.toLocaleLowerCase('tr').includes(q) : (cat==='Tümü' || (c.group||'Özel')===cat));
+  const order = c => GROUPS.indexOf(c.group||'Özel');
+  if(cat==='Tümü' && !q) list.sort((a,b)=>order(a)-order(b));
   $('#pickerList').innerHTML = list.map(c => {
     const at = state.slots.slice(0,state.layout).indexOf(c.id);
     const kind = c.hls?'m3u8':'YouTube';
@@ -475,7 +484,6 @@ let started = false;
 function start(){ if(started) return; started=true; $('#start').classList.remove('show'); render(); loadChannelList(false); setTimeout(playAll, 1500); setTimeout(playAll, 4000); }
 $('#startBtn').addEventListener('click', start);
 $('#start').addEventListener('click', e => { if(e.target.id==='start') start(); });
-const touchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 if(touchDevice){ $('#start').classList.add('show'); } else { start(); }
 })();
 </script>
